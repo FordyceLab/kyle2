@@ -673,7 +673,7 @@ class MutantLib():
         else:
             raise TypeError('Improperly formatted target library index, {}. Must be `best` or of type <int>.'.format(idx))
         
-    def format_primer(self, primer, protein_name, oligo_id, upstream, internal):
+    def format_primer(self, primer, protein_name, oligo_id, upstream, internal, short=False):
         """
         Format the BioPython sequence object containing a primer with the proper name.
         
@@ -684,6 +684,8 @@ class MutantLib():
         - upstream (bool) - Indicator expressing whether primer is upstream
         - internal (bool) - Indicator expressing whether primer is directed internal
             with respect to the oligo
+        - short (bool) - Indicator expressing whether primer is the short version of the
+            internal primer
         """
         
         if upstream:
@@ -697,6 +699,10 @@ class MutantLib():
             direction = 'e'
 
         primer.name = '{}_o{}_{}_{}'.format(protein_name, oligo_id, location, direction)
+        
+        if short:
+            primer.name = primer.name + '_short'
+        
         primer.description = ''
         
     def export_primers(self):
@@ -705,6 +711,9 @@ class MutantLib():
         """
         
         lib = self.lib
+        
+        # Get the protein name
+        protein_name = lib.construct.name
         
         # Open the output file
         outfile_name = self.output_prefix + '_primers.csv'
@@ -738,9 +747,13 @@ class MutantLib():
                 # Get the sequences of the internal primers with the homology tails
                 upstream_internal = lib.construct[ui_start:upstream_primer.end]
                 downstream_internal = lib.construct[downstream_primer.start:di_end].reverse_complement()
-
-                # Get the protein name
-                protein_name = lib.construct.name
+                
+                # Get the short internal primers
+                upstream_internal_short = lib.construct[upstream_primer.start:upstream_primer.end]
+                downstream_internal_short = lib.construct[downstream_primer.start:downstream_primer.end].reverse_complement()
+                
+                self.format_primer(upstream_internal_short, protein_name, idx, True, True, short=True)
+                self.format_primer(downstream_internal_short, protein_name, idx, False, True, short=True)
 
                 # Format the names of the internal primers
                 self.format_primer(upstream_internal, protein_name, idx, True, True)
@@ -755,7 +768,8 @@ class MutantLib():
                 self.format_primer(downstream_external, protein_name, idx, False, False)
 
                 # Make a list of all the primers
-                primers = [upstream_internal, downstream_internal, upstream_external, downstream_external]
+                primers = [upstream_internal, downstream_internal, upstream_internal_short,
+                           downstream_internal_short, upstream_external, downstream_external]
 
                 # Write the primers to the output file
                 for primer in primers:
