@@ -1,0 +1,116 @@
+#!/usr/bin/env python3
+
+from kyle2.kyle2 import Library, MutantLib, codon_table
+import argparse
+
+parser = argparse.ArgumentParser(description='Design REDI mutagenesis library')
+
+# I/O flags
+io = parser.add_argument_group('I/O arguments')
+
+io.add_argument('--input', '-i', dest='input', type=str, action='store', metavar='FILE',
+                    required=True, help='input FASTA file containing sequences for oligo design')
+io.add_argument('--output', '-o', dest='output', type=str, action='store', metavar='PREFIX',
+                    required=True, help='output file prefix')
+io.add_argument('--diagram', '-d', dest='diagram', action='store_true', default=False,
+                    help='save diagram of best library to SVG')
+
+# Library type
+libtype = parser.add_argument_group('library type')
+libtype.add_argument('--mut_scan', nargs='*', type=str, action='store', metavar='RESIDUE',
+                    help='mutant residue to scan')
+libtype.add_argument('--in_scan', nargs='*', type=str, action='store', metavar='INSERT',
+                    help='insert to place at each position')
+
+# Design options
+design = parser.add_argument_group('library design')
+design.add_argument('--size', '-s', dest='size', type=int, action='store', metavar='N',
+                    required=True, help='oligo size')
+design.add_argument('--region', nargs=2, type=int, action='store', metavar='N',
+                    required=True, help='starting and ending positions of the region of interest (coding sequence) in input fasta file')
+design.add_argument('--primer_length', '-l', dest='primer_length', nargs=2, type=int,
+                    action='store', metavar='N', default = [16, 30],
+                    help='primer length range, must provide min and max, default = 16-30')
+design.add_argument('--tm', nargs=2, type=float, action='store', metavar='N', default = [54, 56],
+                    help='desired oligo Tm range in degrees C, must provide min and max, default = 54-56')
+design.add_argument('--hairpin', type=float, default=10, action='store', metavar='N',
+                    help='hairpin tolerance in degrees C, default = 10')
+design.add_argument('--homodimer', type=float, default=10, action='store', metavar='N',
+                    help='homodimer tolerance in degrees C, default = 10')
+
+# Pruning options
+score = parser.add_argument_group('scoring')
+score.add_argument('--gc_ends', type=float, action='store', default=1, metavar='MULT',
+                    help='GC ends reward for oligo scoring, default = 1')
+score.add_argument('--gc_comp', type=float, action='store', default=2, metavar='MULT',
+                    help='GC composition penalty for oligo scoring, default = 2')
+score.add_argument('--tm_mean', type=float, action='store', default=1, metavar='MULT',
+                    help='Tm mean penalty for oligo scoring, default = 1')
+score.add_argument('--hairpin_tm', type=float, action='store', default=0.1, metavar='MULT',
+                    help='hairpin Tm suppression reward for oligo scoring, default = 0.1')
+score.add_argument('--homodimer_tm', type=float, action='store', default=0.1, metavar='MULT',
+                    help='homodimer Tm suppression reward for oligo scoring, default = 0.1')
+score.add_argument('--num_oligos', type=str, action='store', default='all', metavar='SPEC',
+                    help='set to `min` to only consider libraries with the minimum oligo count')
+
+# Tm calculation parameters
+tm = parser.add_argument_group('Tm calculation')
+tm.add_argument('--dna_conc', type=float, action='store', default=250, metavar='N',
+                    help='(Tm calculation) DNA concentration to use for Tm calculation, default = 250')
+tm.add_argument('--mv_conc', type=float, action='store', default=50, metavar='N',
+                    help='monovalent cation concentration to use for Tm calculation, default = 50')
+tm.add_argument('--dv_conc', type=float, action='store', default=0, metavar='N',
+                    help='divalent cation concentration to use for Tm calculation, default = 0')
+tm.add_argument('--dntp_conc', type=float, action='store', default=0, metavar='N',
+                    help='dNTP concentration to use for Tm calculation, default = 0')
+
+if __name__ == '__main__':
+    
+    args, unknown = parser.parse_known_args()
+    
+    if args.mut_scan is not None and args.in_scan is not None:
+        print('Error: Only a mutant scan or an insert scan can be performed, not both.')
+        quit()
+    elif args.mut_scan is None and args.in_scan is None:
+        print('Error: Either a mutant or an insert scan must be specified.')
+        quit()
+        
+    if (args.region[1] - args.region[0]) % 3 != 0:
+        print('Error: Specified region is not codon-valid (length not a multiple of 3).')
+        quit()
+        
+    lib = Library(args.input, args.region[0], args.region[1], args.size,
+                  primer_min_length=args.primer_length[0],
+                  primer_max_length=args.primer_length[1], primer_min_tm=args.tm[0],
+                  primer_max_tm=args.tm[1],
+                  primer_target_tm=abs(args.tm[1] + args.tm[0])/2,
+                  dna_conc=args.dna_conc, mv_conc=args.mv_conc,
+                  dv_conc=args.dv_conc, dntp_conc=args.dntp_conc)
+    lib.design_lib()
+    
+    if len(lib.libraries) == 0:
+        print('Error: No valid libraries found, try relaxing search constraints.')
+        quit()
+    
+    lib.score_libs(gc_ends=args.gc_ends,
+                   gc_comp=args.gc_comp, tm=args.tm_mean,
+                   hairpin_tm=args.hairpin_tm,
+                   homodimer_tm=args.homodimer_tm)
+
+    if args.diagram:
+        lib.plot(args.output + '.svg')
+
+    mlib = MutantLib(lib, args.output)
+    mlib.annotate_codons()
+    
+    # Export primer set
+    mlib.export_primers()
+    
+    if args.mut_scan is not None:
+        for scan in args.mut_scan:
+            mlib.mutant_scan(scan)
+        
+    elif args.in_scan is not None:
+        for scan in args.in_scan:
+            mlib.insert_scan(scan)
+    
