@@ -1,6 +1,8 @@
 # Kyle 2.0 - REDI Library Design Utility
 
-![Kyle 2.0](./kyle2.png)
+<p align="center">
+  <img width="200" src="./kyle2.png">
+</p>
 
 ## How it works
 
@@ -22,7 +24,7 @@ This will make the `kyle2` command line tool publicly available. You can check t
 
 ## How to use it
 
-Kyle 2.0 (command line tool `kyle2`) takes a requires set of I/O parameters and has five sets of command line options used to alter its behavior. Of these, the options `--input`, `--output`, `--size`, `--region` and exctly one of \[`--mut_scan`, `--in_scan`, `--mut_file`, or `--insert_file`\] are required:
+Kyle 2.0 (command line tool `kyle2`) takes a requires set of I/O parameters and has five sets of command line options used to alter its behavior. Of these, the options `--input`, `--output`, `--size`, `--region` and exactly one of \[`--mut_scan`, `--in_scan`, `--mut_file`, or `--insert_file`\] are required:
 
 
 ### I/O flags
@@ -36,7 +38,6 @@ Kyle 2.0 (command line tool `kyle2`) takes a requires set of I/O parameters and 
 - `--in_scan` - insert to place at each position (DNA bases)
 - `--mut_file` - file specifying mutations to made at specific positions only, 3-column tab-separated no header (position, mutant residue \[1-letter amino acid code\], mutant codon \[DNA bases, optional\])
 - `--insert_file` - file specifying insertions to made after specific positions only, 2-column tab-separated no header (position, insert string (DNA bases))
-- ``
 
 ### Library design
 - `--size` or `-s` - oligo size **(required argument)**
