@@ -1089,7 +1089,10 @@ class MutantLib():
         with open(outfile_name, 'w') as outfile:
             for mutant_record in mutations:
                 position, residue, codon = mutant_record
-                name, oligo = self.mutate(position, mutant, codon)
+                
+                position = int(position)
+                
+                name, oligo = self.mutate(position, residue, codon)
                 self.write_lib_record(outfile, name, oligo)
                 
         print('Wrote library to file: {}'.format(outfile_name))
@@ -1106,6 +1109,10 @@ class MutantLib():
         
             for insert_record in insertions:
                 position, insert = insert_record
+                
+                position = int(position)
+                
+                
                 name, oligo = mlib.add_insert(position, insert)
                 self.write_lib_record(outfile, name, oligo)
                 
