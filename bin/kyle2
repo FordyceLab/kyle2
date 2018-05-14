@@ -137,9 +137,8 @@ if __name__ == '__main__':
             else:
                 mlib.insert_scan(scan)
             
-    elif args.mutant_file is not None:
-        mlib.custom_mutants(args.mutant_file)
-            
+    elif args.mut_file is not None:
+        mlib.custom_mutants(args.mut_file)
         
     elif args.insert_file is not None:
         mlib.custom_inserts(args.mutant_file)
