@@ -18,9 +18,16 @@ io.add_argument('--diagram', '-d', dest='diagram', action='store_true', default=
 # Library type
 libtype = parser.add_argument_group('library type')
 libtype.add_argument('--mut_scan', nargs='*', type=str, action='store', metavar='RESIDUE',
-                    help='mutant residue to scan')
+                    help='mutant residue to scan (single letter amino acid code)')
+libtype.add_argument('--codons', nargs='*', type=str, action='store', metavar='CODON',
+                    help='mutant codon to use in scan (DNA bases)')
 libtype.add_argument('--in_scan', nargs='*', type=str, action='store', metavar='INSERT',
-                    help='insert to place at each position')
+                    help='insert to place at each position (DNA bases)')
+libtype.add_argument('--mut_file', type=str, action='store', metavar='INSERT',
+                    help='file specifying mutations to made at specific positions only, 3-column tab-separated no header (position, mutant residue (1-letter amino acid code, mutant codon (DNA bases) [optional])')
+libtype.add_argument('--insert_file', type=str, action='store', metavar='INSERT',
+                    help='file specifying insertions to made after specific positions only, 2-column tab-separated no header (position, insert string (DNA bases))')
+
 
 # Design options
 design = parser.add_argument_group('library design')
@@ -66,13 +73,11 @@ tm.add_argument('--dntp_conc', type=float, action='store', default=0, metavar='N
 
 if __name__ == '__main__':
     
+    # Parse command line arguments
     args, unknown = parser.parse_known_args()
     
     if args.mut_scan is not None and args.in_scan is not None:
         print('Error: Only a mutant scan or an insert scan can be performed, not both.')
-        quit()
-    elif args.mut_scan is None and args.in_scan is None:
-        print('Error: Either a mutant or an insert scan must be specified.')
         quit()
         
     if (args.region[1] - args.region[0]) % 3 != 0:
@@ -107,10 +112,34 @@ if __name__ == '__main__':
     mlib.export_primers()
     
     if args.mut_scan is not None:
-        for scan in args.mut_scan:
-            mlib.mutant_scan(scan)
+        
+        if args.codons is not None:
+            if len(args.codons) != len(args.mut_scan):
+                print('Error: Number of codons provided does not match number of scans to be performed.')
+                quit()
+                
+            else:
+                for scan, codon in zip(args.mut_scan, args.codons):
+                    if codon_table.forward_table[codon] != scan:
+                        print('Error: Provided codon {} does not encode desired residue {}. Skipping...'.format(codon, scan))
+                    else:
+                        mlib.mutant_scan(scan, mutant_codon=codon)
+        else:
+            for scan in args.mut_scan:
+                mlib.mutant_scan(scan)
         
     elif args.in_scan is not None:
         for scan in args.in_scan:
-            mlib.insert_scan(scan)
-    
+            if len(scan) % 3 != 0:
+                print('Error: Insert {} is not codon-valid.'.format(scan))
+                quit()
+            
+            else:
+                mlib.insert_scan(scan)
+            
+    elif args.mutant_file is not None:
+        mlib.custom_mutants(args.mutant_file)
+            
+        
+    elif args.insert_file is not None:
+        mlib.custom_inserts(args.mutant_file)

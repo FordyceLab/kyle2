@@ -933,7 +933,7 @@ class MutantLib():
             name = '{}_{}{}{}_{}'.format(lib.construct.name, poi['residue'], position, residue, syn_string)
 
             # Return the name and the oligo sequence
-            return name, oligo
+            return (name, oligo)
                 
     def add_insert(self, position, insert):
         """
@@ -993,8 +993,7 @@ class MutantLib():
 
                 if mutant_oligo is not None:
                     name, oligo = mutant_oligo
-                    outfile.write('>' + name + '\n')
-                    outfile.write(oligo + '\n')
+                    self.write_lib_record(outfile, name, oligo)
                     
         print('Wrote library to file: {}'.format(outfile_name))
                 
@@ -1018,8 +1017,96 @@ class MutantLib():
                 mutant_oligo = self.add_insert(position, insert)
 
                 name, oligo = mutant_oligo
-                outfile.write('>' + name + '\n')
-                outfile.write(oligo + '\n')
+                self.write_lib_record(outfile, name, oligo)
                 
         print('Wrote library to file: {}'.format(outfile_name))
+        
+    def write_lib_record(self, outfile_handle, name, oligo):
+        """
+        Write a fasta record to given output file handle.
+        
+        Args:
+        - outfile_handle (handle) - Handle to output file
+        - name (str) - Name of oligo
+        - oligo (str) - Sequence of oligo
+        """
+        outfile_handle.write('>' + name + '\n')
+        outfile_handle.write(oligo + '\n')
+
+
+    def read_file(self, filename, mutant_file=True):
+        """
+        Read and parse a file containing mutations or insertions to be made to a library.
+
+        Args:
+        - filename (str) - Path of file to read
+        - mutant_file (bool) - Indicator specifying whether file contains point mutants or insertions
+
+        Returns:
+        - Nested list containing mutation information
+        """
+
+        # Initialize empty list
+        mutations = []
+
+        # Determine the number of fields that should exist
+        num_fields = 3 if mutant_file else 2
+
+        # Open the file
+        with open(filename, 'r') as mutant_file:
+
+            # Read lines
+            for line in mutant_file.readlines():
+
+                # Split the line
+                values = line.split()
+
+                # Raise an error if line contains less than 2 fields
+                if len(values) < 2:
+                    print('Error: Number of fields for line `{}` is invalid.'.format())
+                    quit()
+
+                # Append None if mutant file and codon is missing
+                elif len(values) < num_fields:
+                    values.append(None)
+
+                mutations.append(values)
+
+        return mutations
+    
+    def custom_mutants(self, mutant_file):
+        """
+        Make a custom set of mutations based on those encoded in a file.
+        
+        Args:
+        - 
+        """
+        # Open output fasta
+        outfile_name = self.output_prefix + '_custom_mutants.fa'
+        
+        mutations = self.read_file(mutant_file)
+        
+        with open(outfile_name, 'w') as outfile:
+            for mutant_record in mutations:
+                position, residue, codon = mutant_record
+                name, oligo = self.mutate(position, mutant, codon)
+                self.write_lib_record(outfile, name, oligo)
                 
+        print('Wrote library to file: {}'.format(outfile_name))
+    
+    def custom_inserts(self, insert_file):
+        
+        
+        # Open output fasta
+        outfile_name = self.output_prefix + '_custom_inserts.fa'
+        
+        insertions = self.read_file(insert_file)
+        
+        with open(outfile_name, 'w') as outfile:
+        
+            for insert_record in insertions:
+                position, insert = insert_record
+                name, oligo = mlib.add_insert(position, insert)
+                self.write_lib_record(outfile, name, oligo)
+                
+        print('Wrote library to file: {}'.format(outfile_name))
