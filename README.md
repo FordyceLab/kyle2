@@ -28,9 +28,13 @@ Additionally, all required primers are output to a single CSV file for easy orde
 
 ## Installation
 
-Kyle 2.0 requires Python 3.
+Kyle 2.0 requires Python 3 and the cairo backend for SVG production. First install cairo. On a Mac, this can be done with [Homebrew](https://brew.sh/):
 
-Installation is as easy as:
+```
+brew install cairo
+```
+
+Then, installation is as easy as:
 
 ```
 git clone https://github.com/FordyceLab/kyle2.git
